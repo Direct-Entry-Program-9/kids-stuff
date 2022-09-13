@@ -1,6 +1,7 @@
 package lk.ijse.kids.controller;
 
 import javafx.event.ActionEvent;
+import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.text.Text;
@@ -11,6 +12,7 @@ import lk.ijse.kids.exception.InvalidFieldException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.HashMap;
 
 public class MainFormController {
     public TextField txtId;
@@ -31,9 +33,17 @@ public class MainFormController {
     public Button btnImport;
     public Button btnPrint;
     public AnchorPane root;
+    private HashMap<String, Node> textFieldMap;
 
     public void initialize(){
-
+        textFieldMap = new HashMap<>();
+        textFieldMap.put("id", txtId);
+        textFieldMap.put("title", txtTitle);
+        textFieldMap.put("author", txtAuthor);
+        textFieldMap.put("price", txtPrice);
+        textFieldMap.put("genre", txtGenre);
+        textFieldMap.put("description", txtDescription);
+        textFieldMap.put("date", txtDate);
     }
 
     public void btnNewOnAction(ActionEvent actionEvent) {
@@ -47,54 +57,14 @@ public class MainFormController {
     }
 
     public void btnSaveOnAction(ActionEvent actionEvent) {
-        String id = txtId.getText();
-        String title = txtTitle.getText();
-        String author = txtAuthor.getText();
-        String genre = txtGenre.getText();
-        String strPrice = txtPrice.getText();
-        String description = txtDescription.getText();
-
         try {
-            insertBook(id, title, author, genre, strPrice, txtDate.getValue(), description);
-        } catch (BlankFieldException e) {
-            switch (e.getField()){
-                case "id":
-                    new Alert(Alert.AlertType.ERROR, "Book id can't be empty").show();
-                    txtId.requestFocus();
-                    txtId.selectAll();
-                    break;
-                case "title":
-                    new Alert(Alert.AlertType.ERROR, "Book title can't be empty").show();
-                    txtTitle.requestFocus();
-                    txtTitle.selectAll();
-                    break;
-                case "author":
-                    break;
-                case "genre":
-                    break;
-                case "price":
-                    break;
-                case "date":
-                    break;
-            }
-        } catch (InvalidFieldException e) {
-            switch (e.getField()){
-                case "id":
-                    new Alert(Alert.AlertType.ERROR, "Invalid book id").show();
-                    txtId.requestFocus();
-                    txtId.selectAll();
-                    break;
-                case "title":
-                    break;
-                case "author":
-                    break;
-                case "genre":
-                    break;
-                case "price":
-                    break;
-                case "date":
-                    break;
-            }
+            insertBook(txtId.getText(), txtTitle.getText(), txtAuthor.getText(), txtGenre.getText(),
+                    txtPrice.getText(), txtDate.getValue(), txtDescription.getText());
+        } catch (InvalidBookException e) {
+            new Alert(Alert.AlertType.ERROR, e.getMessage()).show();
+            textFieldMap.get(e.getField()).requestFocus();
+            if (textFieldMap.get(e.getField()) instanceof TextField)
+                ((TextField) textFieldMap.get(e.getField())).selectAll();
         }
     }
 
@@ -108,27 +78,27 @@ public class MainFormController {
 
         /* Data Validation Logic */
         if (id == null || id.isBlank()){
-            throw new BlankFieldException("id");
+            throw new BlankFieldException("Book's id can't be empty", "id");
         }else if (!id.matches("BK\\d{3}")){
-            throw new InvalidFieldException("id");
+            throw new InvalidFieldException("Invalid book id", "id");
         }else if (title == null || title.isBlank()){
-            throw new BlankFieldException("title");
+            throw new BlankFieldException("Book's title can't be empty", "title");
         }else if (author == null || author.isBlank()){
-            throw new BlankFieldException("author");
+            throw new BlankFieldException("Book's author can't be empty", "author");
         }else if (!author.matches("[A-Za-z ][A-Za-z ,]+")){
-            throw new InvalidFieldException("author");
+            throw new InvalidFieldException("Invalid author","author");
         }else if (genre == null || genre.isBlank()) {
-            throw new BlankFieldException("genre");
+            throw new BlankFieldException("Book's genre can't be empty","genre");
         }else if (strPrice == null || strPrice.isBlank()){
-            throw new BlankFieldException("price");
+            throw new BlankFieldException("Book's price can't be empty","price");
         }else if (!strPrice.matches("\\d+([.]\\d{1,2})?")) {
-            throw new InvalidFieldException("price");
+            throw new InvalidFieldException("Invalid book price", "price");
         }else if(new BigDecimal(strPrice).compareTo(BigDecimal.ZERO) <= 0){
-            throw new InvalidFieldException("price");
+            throw new InvalidFieldException("Book price can't be a negative value or zero","price");
         }else if (publishedDate == null){
-            throw new BlankFieldException("date");
+            throw new BlankFieldException("Book's published date can't be empty", "date");
         }else if (publishedDate.isAfter(LocalDate.now())){
-            throw new InvalidFieldException("date");
+            throw new InvalidFieldException("Book's published date can't be a future date","date");
         }
     }
 
