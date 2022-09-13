@@ -11,6 +11,7 @@ import lk.ijse.kids.exception.InvalidBookException;
 import lk.ijse.kids.exception.InvalidFieldException;
 
 import java.math.BigDecimal;
+import java.sql.*;
 import java.time.LocalDate;
 import java.util.HashMap;
 
@@ -44,6 +45,11 @@ public class MainFormController {
         textFieldMap.put("genre", txtGenre);
         textFieldMap.put("description", txtDescription);
         textFieldMap.put("date", txtDate);
+        loadAllBooksFromDB();
+    }
+
+    private void loadAllBooksFromDB(){
+
     }
 
     public void btnNewOnAction(ActionEvent actionEvent) {
@@ -99,6 +105,35 @@ public class MainFormController {
             throw new BlankFieldException("Book's published date can't be empty", "date");
         }else if (publishedDate.isAfter(LocalDate.now())){
             throw new InvalidFieldException("Book's published date can't be a future date","date");
+        }
+
+        try (Connection connection =
+                     DriverManager.getConnection("jdbc:mysql://localhost:3306/dep9_kids",
+                             "root", "mysql")) {
+
+            /* Business Validation */
+            PreparedStatement stm = connection.prepareStatement("SELECT * FROM Book WHERE id=?");
+            stm.setString(1,id);
+            ResultSet rst = stm.executeQuery();
+            if (rst.next()) throw new InvalidFieldException("Book id already exists", "id");
+
+            PreparedStatement stm2 = connection.
+                    prepareStatement("INSERT INTO Book VALUES (?, ?, ?, ?, ?, ?, ?)");
+            stm2.setString(1, id);
+            stm2.setString(2, title);
+            stm2.setString(3, author);
+            stm2.setString(4, genre);
+            stm2.setBigDecimal(5, new BigDecimal(strPrice));
+            stm2.setDate(6, Date.valueOf(publishedDate));
+            stm2.setString(7, description);
+
+            stm2.executeUpdate();
+            btnNew.fire();
+
+            /* Todo: Add the record to the UI table */
+        } catch (SQLException e) {
+            new Alert(Alert.AlertType.ERROR, "Failed to save the book").show();
+            e.printStackTrace();
         }
     }
 
