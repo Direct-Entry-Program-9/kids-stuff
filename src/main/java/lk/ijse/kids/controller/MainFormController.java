@@ -115,7 +115,7 @@ public class MainFormController {
             throw new InvalidBookException.InvalidBookAuthorException();
         }else if (genre == null || genre.isBlank()) {
             throw new InvalidBookException.BlankBookGenreException();
-        }else if (strPrice == null){
+        }else if (strPrice == null || strPrice.isBlank()){
             throw new InvalidBookException.BlankBookPriceException();
         }else if (!strPrice.matches("\\d+([.]\\d{1,2})?")) {
             throw new InvalidBookException.InvalidBookPriceException();

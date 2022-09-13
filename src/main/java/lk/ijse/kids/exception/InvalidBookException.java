@@ -2,32 +2,30 @@ package lk.ijse.kids.exception;
 
 public class InvalidBookException extends Exception{
 
-    public InvalidBookException() {
+    private final String field;
+
+    public InvalidBookException(String field) {
+        this.field = field;
     }
 
-    public InvalidBookException(String message) {
+    public InvalidBookException(String message, String field) {
         super(message);
+        this.field = field;
     }
 
-    public InvalidBookException(String message, Throwable cause) {
+    public InvalidBookException(String message, Throwable cause, String field) {
         super(message, cause);
+        this.field = field;
     }
 
-    public InvalidBookException(Throwable cause) {
+    public InvalidBookException(Throwable cause, String field) {
         super(cause);
+        this.field = field;
     }
 
-    public static class BlankBookIdException extends InvalidBookException{}
-    public static class BlankBookTitleException extends InvalidBookException{}
-    public static class BlankBookAuthorException extends InvalidBookException{}
-    public static class BlankBookGenreException extends InvalidBookException{}
-    public static class BlankBookPriceException extends InvalidBookException{}
-    public static class BlankBookPublishedDateException extends InvalidBookException{}
-
-    public static class InvalidBookIdException extends InvalidBookException{}
-    public static class InvalidBookAuthorException extends InvalidBookException{}
-    public static class InvalidBookPriceException extends InvalidBookException{}
-    public static class InvalidBookPublishedDateException extends InvalidBookException{}
+    public String getField() {
+        return field;
+    }
 }
 
 
