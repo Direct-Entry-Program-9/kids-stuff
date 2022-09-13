@@ -5,7 +5,9 @@ import javafx.scene.control.*;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.text.Text;
 import lk.ijse.kids.entity.Book;
+import lk.ijse.kids.exception.BlankFieldException;
 import lk.ijse.kids.exception.InvalidBookException;
+import lk.ijse.kids.exception.InvalidFieldException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -54,44 +56,45 @@ public class MainFormController {
 
         try {
             insertBook(id, title, author, genre, strPrice, txtDate.getValue(), description);
-        } catch (InvalidBookException.BlankBookIdException e) {
-            new Alert(Alert.AlertType.ERROR, "Id can't be empty").show();
-            txtId.requestFocus();
-            txtId.selectAll();
-        } catch (InvalidBookException.BlankBookTitleException e) {
-            new Alert(Alert.AlertType.ERROR, "Title can't be empty").show();
-            txtTitle.requestFocus();
-            txtTitle.selectAll();
-        } catch (InvalidBookException.BlankBookGenreException e) {
-            new Alert(Alert.AlertType.ERROR, "Genre can't be empty").show();
-            txtGenre.requestFocus();
-            txtGenre.selectAll();
-        } catch (InvalidBookException.BlankBookAuthorException e) {
-            new Alert(Alert.AlertType.ERROR, "Author can't be empty").show();
-            txtAuthor.requestFocus();
-            txtAuthor.selectAll();
-        } catch (InvalidBookException.BlankBookPriceException e) {
-            new Alert(Alert.AlertType.ERROR, "Price can't be empty").show();
-            txtPrice.requestFocus();
-            txtPrice.selectAll();
-        } catch (InvalidBookException.BlankBookPublishedDateException e) {
-            new Alert(Alert.AlertType.ERROR, "Published date can't be empty").show();
-            txtDate.requestFocus();
-        } catch (InvalidBookException.InvalidBookIdException e) {
-            new Alert(Alert.AlertType.ERROR, "Invalid book id").show();
-            txtId.requestFocus();
-            txtId.selectAll();
-        } catch (InvalidBookException.InvalidBookAuthorException e) {
-            new Alert(Alert.AlertType.ERROR, "Invalid author name(s)").show();
-            txtAuthor.requestFocus();
-            txtAuthor.selectAll();
-        } catch (InvalidBookException.InvalidBookPriceException e) {
-            new Alert(Alert.AlertType.ERROR, "Invalid price").show();
-            txtPrice.requestFocus();
-            txtPrice.selectAll();
-        } catch (InvalidBookException.InvalidBookPublishedDateException e) {
-            new Alert(Alert.AlertType.ERROR, "Invalid date, a future date can't be set as published date").show();
-            txtDate.requestFocus();
+        } catch (BlankFieldException e) {
+            switch (e.getField()){
+                case "id":
+                    new Alert(Alert.AlertType.ERROR, "Book id can't be empty").show();
+                    txtId.requestFocus();
+                    txtId.selectAll();
+                    break;
+                case "title":
+                    new Alert(Alert.AlertType.ERROR, "Book title can't be empty").show();
+                    txtTitle.requestFocus();
+                    txtTitle.selectAll();
+                    break;
+                case "author":
+                    break;
+                case "genre":
+                    break;
+                case "price":
+                    break;
+                case "date":
+                    break;
+            }
+        } catch (InvalidFieldException e) {
+            switch (e.getField()){
+                case "id":
+                    new Alert(Alert.AlertType.ERROR, "Invalid book id").show();
+                    txtId.requestFocus();
+                    txtId.selectAll();
+                    break;
+                case "title":
+                    break;
+                case "author":
+                    break;
+                case "genre":
+                    break;
+                case "price":
+                    break;
+                case "date":
+                    break;
+            }
         }
     }
 
@@ -101,30 +104,31 @@ public class MainFormController {
                             String genre,
                             String strPrice,
                             LocalDate publishedDate,
-                            String description) throws InvalidBookException.BlankBookIdException, InvalidBookException.InvalidBookIdException, InvalidBookException.BlankBookTitleException, InvalidBookException.BlankBookAuthorException, InvalidBookException.InvalidBookAuthorException, InvalidBookException.BlankBookGenreException, InvalidBookException.InvalidBookPriceException, InvalidBookException.InvalidBookPublishedDateException, InvalidBookException.BlankBookPriceException, InvalidBookException.BlankBookPublishedDateException {
+                            String description) throws BlankFieldException, InvalidFieldException {
 
+        /* Data Validation Logic */
         if (id == null || id.isBlank()){
-            throw new InvalidBookException.BlankBookIdException();
+            throw new BlankFieldException("id");
         }else if (!id.matches("BK\\d{3}")){
-            throw new InvalidBookException.InvalidBookIdException();
+            throw new InvalidFieldException("id");
         }else if (title == null || title.isBlank()){
-            throw new InvalidBookException.BlankBookTitleException();
+            throw new BlankFieldException("title");
         }else if (author == null || author.isBlank()){
-            throw new InvalidBookException.BlankBookAuthorException();
+            throw new BlankFieldException("author");
         }else if (!author.matches("[A-Za-z ][A-Za-z ,]+")){
-            throw new InvalidBookException.InvalidBookAuthorException();
+            throw new InvalidFieldException("author");
         }else if (genre == null || genre.isBlank()) {
-            throw new InvalidBookException.BlankBookGenreException();
+            throw new BlankFieldException("genre");
         }else if (strPrice == null || strPrice.isBlank()){
-            throw new InvalidBookException.BlankBookPriceException();
+            throw new BlankFieldException("price");
         }else if (!strPrice.matches("\\d+([.]\\d{1,2})?")) {
-            throw new InvalidBookException.InvalidBookPriceException();
+            throw new InvalidFieldException("price");
         }else if(new BigDecimal(strPrice).compareTo(BigDecimal.ZERO) <= 0){
-            throw new InvalidBookException.InvalidBookPriceException();
+            throw new InvalidFieldException("price");
         }else if (publishedDate == null){
-            throw new InvalidBookException.BlankBookPublishedDateException();
+            throw new BlankFieldException("date");
         }else if (publishedDate.isAfter(LocalDate.now())){
-            throw new InvalidBookException.InvalidBookPublishedDateException();
+            throw new InvalidFieldException("date");
         }
     }
 
