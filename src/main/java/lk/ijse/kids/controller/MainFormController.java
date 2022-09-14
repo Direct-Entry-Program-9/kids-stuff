@@ -3,8 +3,9 @@ package lk.ijse.kids.controller;
 import javafx.event.ActionEvent;
 import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.control.cell.CheckBoxTableCell;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.AnchorPane;
-import javafx.scene.text.Text;
 import lk.ijse.kids.entity.Book;
 import lk.ijse.kids.exception.BlankFieldException;
 import lk.ijse.kids.exception.InvalidBookException;
@@ -13,9 +14,12 @@ import lk.ijse.kids.exception.InvalidFieldException;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 public class MainFormController {
+    private final List<Book> selectedBooks = new ArrayList<>();
     public TextField txtId;
     public TextField txtTitle;
     public TextField txtAuthor;
@@ -23,7 +27,7 @@ public class MainFormController {
     public TextField txtPrice;
     public DatePicker txtDate;
     public TextField txtDescription;
-    public TableView tblBooks;
+    public TableView<Book> tblBooks;
     public Label lblSelectStatus;
     public Label lblStatus;
     public ProgressBar pgb;
@@ -36,7 +40,7 @@ public class MainFormController {
     public AnchorPane root;
     private HashMap<String, Node> textFieldMap;
 
-    public void initialize(){
+    public void initialize() {
         textFieldMap = new HashMap<>();
         textFieldMap.put("id", txtId);
         textFieldMap.put("title", txtTitle);
@@ -45,11 +49,37 @@ public class MainFormController {
         textFieldMap.put("genre", txtGenre);
         textFieldMap.put("description", txtDescription);
         textFieldMap.put("date", txtDate);
+
+        tblBooks.setEditable(true);
+        TableColumn<Book, Boolean> firstCol = (TableColumn<Book, Boolean>) tblBooks.getColumns().get(0);
+        firstCol.setCellFactory(bookBookTableColumn -> new CheckBoxTableCell<>());
+        tblBooks.getColumns().get(1).setCellValueFactory(new PropertyValueFactory<>("id"));
+        tblBooks.getColumns().get(2).setCellValueFactory(new PropertyValueFactory<>("title"));
+        tblBooks.getColumns().get(3).setCellValueFactory(new PropertyValueFactory<>("author"));
+        tblBooks.getColumns().get(4).setCellValueFactory(new PropertyValueFactory<>("price"));
+
         loadAllBooksFromDB();
     }
 
-    private void loadAllBooksFromDB(){
+    private void loadAllBooksFromDB() {
+        try (Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/dep9_kids", "root", "mysql")) {
+            Statement stm = connection.createStatement();
+            ResultSet rst = stm.executeQuery("SELECT * FROM Book");
 
+            while (rst.next()) {
+                String id = rst.getString("id");
+                String title = rst.getString("title");
+                String author = rst.getString("author");
+                String genre = rst.getString("genre");
+                BigDecimal price = rst.getBigDecimal("price");
+                LocalDate publishedDate = rst.getDate("published_date").toLocalDate();
+                String description = rst.getString("description");
+                tblBooks.getItems().add(new Book(id, title, author, genre, price, publishedDate, description));
+            }
+        } catch (SQLException e) {
+            new Alert(Alert.AlertType.ERROR, "Failed to load books");
+            e.printStackTrace();
+        }
     }
 
     public void btnNewOnAction(ActionEvent actionEvent) {
@@ -83,28 +113,28 @@ public class MainFormController {
                             String description) throws BlankFieldException, InvalidFieldException {
 
         /* Data Validation Logic */
-        if (id == null || id.isBlank()){
+        if (id == null || id.isBlank()) {
             throw new BlankFieldException("Book's id can't be empty", "id");
-        }else if (!id.matches("BK\\d{3}")){
+        } else if (!id.matches("BK\\d{3}")) {
             throw new InvalidFieldException("Invalid book id", "id");
-        }else if (title == null || title.isBlank()){
+        } else if (title == null || title.isBlank()) {
             throw new BlankFieldException("Book's title can't be empty", "title");
-        }else if (author == null || author.isBlank()){
+        } else if (author == null || author.isBlank()) {
             throw new BlankFieldException("Book's author can't be empty", "author");
-        }else if (!author.matches("[A-Za-z ][A-Za-z ,]+")){
-            throw new InvalidFieldException("Invalid author","author");
-        }else if (genre == null || genre.isBlank()) {
-            throw new BlankFieldException("Book's genre can't be empty","genre");
-        }else if (strPrice == null || strPrice.isBlank()){
-            throw new BlankFieldException("Book's price can't be empty","price");
-        }else if (!strPrice.matches("\\d+([.]\\d{1,2})?")) {
+        } else if (!author.matches("[A-Za-z ][A-Za-z ,]+")) {
+            throw new InvalidFieldException("Invalid author", "author");
+        } else if (genre == null || genre.isBlank()) {
+            throw new BlankFieldException("Book's genre can't be empty", "genre");
+        } else if (strPrice == null || strPrice.isBlank()) {
+            throw new BlankFieldException("Book's price can't be empty", "price");
+        } else if (!strPrice.matches("\\d+([.]\\d{1,2})?")) {
             throw new InvalidFieldException("Invalid book price", "price");
-        }else if(new BigDecimal(strPrice).compareTo(BigDecimal.ZERO) <= 0){
-            throw new InvalidFieldException("Book price can't be a negative value or zero","price");
-        }else if (publishedDate == null){
+        } else if (new BigDecimal(strPrice).compareTo(BigDecimal.ZERO) <= 0) {
+            throw new InvalidFieldException("Book price can't be a negative value or zero", "price");
+        } else if (publishedDate == null) {
             throw new BlankFieldException("Book's published date can't be empty", "date");
-        }else if (publishedDate.isAfter(LocalDate.now())){
-            throw new InvalidFieldException("Book's published date can't be a future date","date");
+        } else if (publishedDate.isAfter(LocalDate.now())) {
+            throw new InvalidFieldException("Book's published date can't be a future date", "date");
         }
 
         try (Connection connection =
@@ -113,7 +143,7 @@ public class MainFormController {
 
             /* Business Validation */
             PreparedStatement stm = connection.prepareStatement("SELECT * FROM Book WHERE id=?");
-            stm.setString(1,id);
+            stm.setString(1, id);
             ResultSet rst = stm.executeQuery();
             if (rst.next()) throw new InvalidFieldException("Book id already exists", "id");
 
@@ -130,7 +160,6 @@ public class MainFormController {
             stm2.executeUpdate();
             btnNew.fire();
 
-            /* Todo: Add the record to the UI table */
         } catch (SQLException e) {
             new Alert(Alert.AlertType.ERROR, "Failed to save the book").show();
             e.printStackTrace();
