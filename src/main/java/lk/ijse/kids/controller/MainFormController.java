@@ -74,6 +74,24 @@ public class MainFormController {
         tblBooks.getColumns().get(4).setCellValueFactory(new PropertyValueFactory<>("price"));
 
         loadAllBooksFromDB();
+
+        tblBooks.getSelectionModel().selectedItemProperty().
+                addListener((observableValue, previousSelectedRow, currentSelectedRow) -> {
+            if (currentSelectedRow == null)return;
+
+            txtId.setText(currentSelectedRow.getId());
+            txtTitle.setText(currentSelectedRow.getTitle());
+            txtAuthor.setText(currentSelectedRow.getAuthor());
+            txtGenre.setText(currentSelectedRow.getGenre());
+            txtPrice.setText(currentSelectedRow.getPrice().toString());
+            txtDate.setValue(currentSelectedRow.getPublishedDate());
+            txtDescription.setText(currentSelectedRow.getDescription());
+
+            root.getChildren().forEach(node -> {
+                if (node instanceof TextField || node instanceof DatePicker) node.setDisable(true);
+            });
+            btnSave.setDisable(true);
+        });
     }
 
     private void updateSelectedStatus(){
@@ -112,6 +130,7 @@ public class MainFormController {
         btnSave.setDisable(false);
         txtDate.setValue(LocalDate.now());
         txtId.requestFocus();
+        tblBooks.getSelectionModel().clearSelection();
     }
 
     public void btnSaveOnAction(ActionEvent actionEvent) {
