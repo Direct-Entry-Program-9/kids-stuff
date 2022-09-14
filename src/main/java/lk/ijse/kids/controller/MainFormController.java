@@ -19,6 +19,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 
 public class MainFormController {
     public TextField txtId;
@@ -214,6 +215,26 @@ public class MainFormController {
 
 
     public void btnDeleteOnAction(ActionEvent actionEvent) {
+        Optional<ButtonType> response = new Alert(Alert.AlertType.CONFIRMATION,
+                String.format("There are %d records selected. Are you sure to delete?", selectedBooks.size()),
+                ButtonType.YES, ButtonType.NO).showAndWait();
+        if (response.get() == ButtonType.NO) return;
+
+        try (Connection connection =
+                     DriverManager.getConnection("jdbc:mysql://localhost:3306/dep9_kids",
+                             "root", "mysql")) {
+            PreparedStatement stm = connection.prepareStatement("DELETE FROM Book WHERE id=?");
+            for (Book book : selectedBooks) {
+                stm.setString(1, book.getId());
+                stm.executeUpdate();
+            }
+            tblBooks.getItems().removeAll(selectedBooks);
+            selectedBooks.clear();
+            updateSelectedStatus();
+        } catch (SQLException e) {
+            new Alert(Alert.AlertType.ERROR, "Failed to delete records").show();
+            e.printStackTrace();
+        }
     }
 
     public void btnExportOnAction(ActionEvent actionEvent) {
