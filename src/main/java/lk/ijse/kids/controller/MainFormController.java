@@ -8,18 +8,31 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.CheckBoxTableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.AnchorPane;
+import javafx.stage.FileChooser;
 import lk.ijse.kids.entity.Book;
 import lk.ijse.kids.exception.BlankFieldException;
 import lk.ijse.kids.exception.InvalidBookException;
 import lk.ijse.kids.exception.InvalidFieldException;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.TransformerConfigurationException;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.*;
+import java.sql.Date;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Optional;
+import java.time.LocalDateTime;
+import java.util.*;
 
 public class MainFormController {
     public TextField txtId;
@@ -238,6 +251,56 @@ public class MainFormController {
     }
 
     public void btnExportOnAction(ActionEvent actionEvent) {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Export Books");
+        fileChooser.setInitialDirectory(new File(System.getProperty("user.home")));
+        fileChooser.setInitialFileName(String.format("Books-%1$tF-%1$tT.xml", Calendar.getInstance().getTime()));
+        File exportedFile = fileChooser.showSaveDialog(btnExport.getScene().getWindow());
+        if (exportedFile == null) return;
+
+        try {
+            if (!exportedFile.exists()) exportedFile.createNewFile();
+            try(BufferedWriter bw = new BufferedWriter(new FileWriter(exportedFile))){
+
+                Document xmlDoc = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
+                Element elmCatalog = xmlDoc.createElement("catalog");
+                for (Book book : selectedBooks) {
+                    Element elmBook = xmlDoc.createElement("book");
+                    elmBook.setAttribute("id", book.getId());
+
+                    Element elmTitle = xmlDoc.createElement("title");
+                    Element elmAuthor = xmlDoc.createElement("author");
+                    Element elmGenre = xmlDoc.createElement("genre");
+                    Element elmPrice = xmlDoc.createElement("price");
+                    Element elmPublishedDate = xmlDoc.createElement("published_date");
+                    Element elmDescription = xmlDoc.createElement("description");
+
+                    elmTitle.setTextContent(book.getTitle());
+                    elmAuthor.setTextContent(book.getAuthor());
+                    elmGenre.setTextContent(book.getGenre());
+                    elmPrice.setTextContent(book.getPrice().setScale(2).toString());
+                    elmPublishedDate.setTextContent(book.getPublishedDate().toString());
+                    elmDescription.setTextContent(book.getDescription());
+
+                    elmBook.appendChild(elmTitle);
+                    elmBook.appendChild(elmAuthor);
+                    elmBook.appendChild(elmGenre);
+                    elmBook.appendChild(elmPrice);
+                    elmBook.appendChild(elmPublishedDate);
+                    elmBook.appendChild(elmDescription);
+
+                    elmCatalog.appendChild(elmBook);
+                }
+                xmlDoc.appendChild(elmCatalog);
+                TransformerFactory.newInstance().newTransformer().transform(new DOMSource(xmlDoc),
+                        new StreamResult(bw));
+                new Alert(Alert.AlertType.INFORMATION,
+                        String.format("%d Book(s) have been exported successfully", selectedBooks.size())).show();
+            }
+        } catch (IOException | ParserConfigurationException | TransformerException e) {
+            new Alert(Alert.AlertType.ERROR, "Failed to export books").show();
+            e.printStackTrace();
+        }
     }
 
     public void btnImportOnAction(ActionEvent actionEvent) {
