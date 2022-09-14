@@ -1,5 +1,7 @@
 package lk.ijse.kids.controller;
 
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.event.ActionEvent;
 import javafx.scene.Node;
 import javafx.scene.control.*;
@@ -19,7 +21,6 @@ import java.util.HashMap;
 import java.util.List;
 
 public class MainFormController {
-    private final List<Book> selectedBooks = new ArrayList<>();
     public TextField txtId;
     public TextField txtTitle;
     public TextField txtAuthor;
@@ -39,6 +40,7 @@ public class MainFormController {
     public Button btnPrint;
     public AnchorPane root;
     private HashMap<String, Node> textFieldMap;
+    private List<Book> selectedBooks;
 
     public void initialize() {
         textFieldMap = new HashMap<>();
@@ -49,16 +51,35 @@ public class MainFormController {
         textFieldMap.put("genre", txtGenre);
         textFieldMap.put("description", txtDescription);
         textFieldMap.put("date", txtDate);
+        selectedBooks = new ArrayList<>();
 
         tblBooks.setEditable(true);
         TableColumn<Book, Boolean> firstCol = (TableColumn<Book, Boolean>) tblBooks.getColumns().get(0);
         firstCol.setCellFactory(bookBookTableColumn -> new CheckBoxTableCell<>());
+        firstCol.setCellValueFactory(param -> {
+            SimpleBooleanProperty chk = new SimpleBooleanProperty();
+            chk.addListener((observableValue, oldValue, newValue) -> {
+                if (newValue){
+                    selectedBooks.add(param.getValue());
+                }else{
+                    selectedBooks.remove(param.getValue());
+                }
+                updateSelectedStatus();
+            });
+            return chk;
+        });
         tblBooks.getColumns().get(1).setCellValueFactory(new PropertyValueFactory<>("id"));
         tblBooks.getColumns().get(2).setCellValueFactory(new PropertyValueFactory<>("title"));
         tblBooks.getColumns().get(3).setCellValueFactory(new PropertyValueFactory<>("author"));
         tblBooks.getColumns().get(4).setCellValueFactory(new PropertyValueFactory<>("price"));
 
         loadAllBooksFromDB();
+    }
+
+    private void updateSelectedStatus(){
+        lblSelectStatus.setText(String.format("%d/%d SELECTED", selectedBooks.size(), tblBooks.getItems().size()));
+        btnDelete.setDisable(selectedBooks.isEmpty());
+        btnExport.setDisable(selectedBooks.isEmpty());
     }
 
     private void loadAllBooksFromDB() {
@@ -76,6 +97,7 @@ public class MainFormController {
                 String description = rst.getString("description");
                 tblBooks.getItems().add(new Book(id, title, author, genre, price, publishedDate, description));
             }
+            updateSelectedStatus();
         } catch (SQLException e) {
             new Alert(Alert.AlertType.ERROR, "Failed to load books");
             e.printStackTrace();
@@ -158,6 +180,11 @@ public class MainFormController {
             stm2.setString(7, description);
 
             stm2.executeUpdate();
+
+            Book newBook = new Book(id, title, author, genre, new BigDecimal(strPrice), publishedDate, description);
+            tblBooks.getItems().add(newBook);
+            updateSelectedStatus();
+
             btnNew.fire();
 
         } catch (SQLException e) {
