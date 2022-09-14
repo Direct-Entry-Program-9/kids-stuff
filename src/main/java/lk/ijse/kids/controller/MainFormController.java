@@ -1,7 +1,6 @@
 package lk.ijse.kids.controller;
 
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleStringProperty;
 import javafx.event.ActionEvent;
 import javafx.scene.Node;
 import javafx.scene.control.*;
@@ -15,10 +14,11 @@ import lk.ijse.kids.exception.InvalidBookException;
 import lk.ijse.kids.exception.InvalidFieldException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
@@ -28,10 +28,9 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.sql.*;
 import java.sql.Date;
+import java.sql.*;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.*;
 
 public class MainFormController {
@@ -57,6 +56,7 @@ public class MainFormController {
     private List<Book> selectedBooks;
 
     public void initialize() {
+        btnImport.setDisable(false);
         textFieldMap = new HashMap<>();
         textFieldMap.put("id", txtId);
         textFieldMap.put("title", txtTitle);
@@ -170,13 +170,13 @@ public class MainFormController {
         /* Data Validation Logic */
         if (id == null || id.isBlank()) {
             throw new BlankFieldException("Book's id can't be empty", "id");
-        } else if (!id.matches("BK\\d{3}")) {
+        } else if (!id.toUpperCase().matches("BK\\d{3}")) {
             throw new InvalidFieldException("Invalid book id", "id");
         } else if (title == null || title.isBlank()) {
             throw new BlankFieldException("Book's title can't be empty", "title");
         } else if (author == null || author.isBlank()) {
             throw new BlankFieldException("Book's author can't be empty", "author");
-        } else if (!author.matches("[A-Za-z ][A-Za-z ,]+")) {
+        } else if (!author.matches("[A-Za-z ][A-Za-z ,']+")) {
             throw new InvalidFieldException("Invalid author", "author");
         } else if (genre == null || genre.isBlank()) {
             throw new BlankFieldException("Book's genre can't be empty", "genre");
@@ -253,6 +253,7 @@ public class MainFormController {
     public void btnExportOnAction(ActionEvent actionEvent) {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Export Books");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("XML Files", "*.xml"));
         fileChooser.setInitialDirectory(new File(System.getProperty("user.home")));
         fileChooser.setInitialFileName(String.format("Books-%1$tF-%1$tT.xml", Calendar.getInstance().getTime()));
         File exportedFile = fileChooser.showSaveDialog(btnExport.getScene().getWindow());
@@ -272,7 +273,7 @@ public class MainFormController {
                     Element elmAuthor = xmlDoc.createElement("author");
                     Element elmGenre = xmlDoc.createElement("genre");
                     Element elmPrice = xmlDoc.createElement("price");
-                    Element elmPublishedDate = xmlDoc.createElement("published_date");
+                    Element elmPublishedDate = xmlDoc.createElement("publish_date");
                     Element elmDescription = xmlDoc.createElement("description");
 
                     elmTitle.setTextContent(book.getTitle());
@@ -304,6 +305,67 @@ public class MainFormController {
     }
 
     public void btnImportOnAction(ActionEvent actionEvent) {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Import Books");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("XML Files", "*.xml"));
+        fileChooser.setInitialDirectory(new File(System.getProperty("user.home")));
+        File importedFile = fileChooser.showOpenDialog(btnImport.getScene().getWindow());
+        if (importedFile == null) return;
+
+        try {
+            Document xmlDoc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(importedFile);
+            Element rootElm = xmlDoc.getDocumentElement();
+            if (!rootElm.getTagName().equals("catalog")) {
+                new Alert(Alert.AlertType.ERROR, "Invalid book database").show();
+                return;
+            }
+
+            NodeList books = rootElm.getElementsByTagName("book");
+            if (books.getLength() == 0){
+                new Alert(Alert.AlertType.INFORMATION, "No books to import").show();
+                return;
+            }
+
+            NodeList authorList = rootElm.getElementsByTagName("author");
+            NodeList titleList = rootElm.getElementsByTagName("title");
+            NodeList priceList = rootElm.getElementsByTagName("price");
+            NodeList genreList = rootElm.getElementsByTagName("genre");
+            NodeList descriptionList = rootElm.getElementsByTagName("description");
+            NodeList dateList = rootElm.getElementsByTagName("publish_date");
+
+            if (!(books.getLength() == authorList.getLength() &&
+                    books.getLength() == titleList.getLength() &&
+                    books.getLength() == priceList.getLength() &&
+                    books.getLength() == genreList.getLength() &&
+                    books.getLength() == descriptionList.getLength() &&
+                    books.getLength() == dateList.getLength())) {
+                new Alert(Alert.AlertType.ERROR, "Failed to validate the XML schema").show();
+                return;
+            }
+
+            int importedBooks = 0;
+            for (int i = 0; i < books.getLength(); i++) {
+                String id = ((Element) books.item(i)).getAttribute("id");
+                try {
+                    insertBook(id,
+                            titleList.item(i).getTextContent(),
+                            authorList.item(i).getTextContent(),
+                            genreList.item(i).getTextContent(),
+                            priceList.item(i).getTextContent(),
+                            LocalDate.parse(dateList.item(i).getTextContent()),
+                            descriptionList.item(i).getTextContent());
+                    importedBooks++;
+                } catch (InvalidBookException e) {
+                    /* Do nothing */
+                }
+            }
+            new Alert(Alert.AlertType.INFORMATION,
+                    String.format("Imported %d from %d successfully",importedBooks, books.getLength() )).show();
+            updateSelectedStatus();
+        } catch (SAXException | IOException | ParserConfigurationException e) {
+            new Alert(Alert.AlertType.ERROR, "Failed to import books").show();
+            e.printStackTrace();
+        }
     }
 
     public void btnPrintOnAction(ActionEvent actionEvent) {
